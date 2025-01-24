@@ -1,2 +1,4 @@
 # Ignore file production
 config/production.yaml
+# Ignore storage
+storage/
