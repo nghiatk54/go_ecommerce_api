@@ -1,0 +1,22 @@
+server:
+  port: 8082
+databases:
+  - user: admin
+    password: admin
+    host: localhost
+    dbName: shopDev
+  - user: order
+    password: order
+    host: localhost
+    dbName: shopOrder
+security:
+  jwt:
+    key: abc123
+redis:
+  user: admin
+elasticsearch:
+  user: admin
+rabbitMq:
+  user: admin
+kafka:
+  user: admin
