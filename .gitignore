@@ -2,3 +2,5 @@
 config/production.yaml
 # Ignore storage
 storage/
+# Ignore folder ./kafka
+kafka/
