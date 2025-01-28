@@ -2,8 +2,8 @@ server:
   port: 8002
   mode: "dev"
 mysql:
-  host: 127.0.0.1
-  port: 33306
+  host: 127.0.0.1 #mysql_container
+  port: 33306 #3306
   userName: root
   password: root1234
   dbName: shopDevGo
@@ -18,8 +18,9 @@ logger:
   maxAge: 28
   compress: true
 redis:
-  host: 127.0.0.1
-  port: 6331
+  host: 127.0.0.1 #redis_container
+  port: 6331 #6379
   password: ""
   database: 0
   poolSize: 10
+
