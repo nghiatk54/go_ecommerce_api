@@ -27,20 +27,4 @@ func InitRedis() {
 	fmt.Println("Initialize redis successfully")
 	global.Logger.Info("Initialize redis successfully")
 	global.Rdb = rdb
-	redisExpamle()
-}
-
-func redisExpamle() {
-	err := global.Rdb.Set(ctx, "score", 100, 0).Err()
-	if err != nil {
-		fmt.Println("Failed to set score", zap.Error(err))
-		return
-	}
-	value, err := global.Rdb.Get(ctx, "score").Result()
-	if err != nil {
-		fmt.Println("Failed to get score", zap.Error(err))
-		return
-	}
-	fmt.Println("Value Score is::", value)
-	global.Logger.Info("Value Score is::", zap.String("score", value))
 }

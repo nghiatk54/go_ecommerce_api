@@ -23,4 +23,10 @@ redis:
   password: ""
   database: 0
   poolSize: 10
+smtp:
+  host: email-smtp.us-east-1.amazonaws.com
+  port: 25
+  username: AKIA47CRXYD3EGBUCQUW
+  password: BC0KeA4GAfzgRh/U9A5/+zdJyfwo7zAOdrJwuw0/Yppy
+  from: nghiatk54@gmail.com
 

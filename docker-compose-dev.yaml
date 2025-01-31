@@ -75,6 +75,8 @@ services:
       - "8080:80"
     depends_on:
       - mysql
+    networks:
+      - app-network
   redis:
     image: redis:7.0
     container_name: redis_container
@@ -94,7 +96,8 @@ services:
       - redis_insight_data:/db
     depends_on:
       - redis
-
+    networks:
+      - app-network
 networks:
   app-network:
     driver: bridge

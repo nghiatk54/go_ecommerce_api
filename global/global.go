@@ -1,6 +1,8 @@
 package global
 
 import (
+	"database/sql"
+
 	"github.com/nghiatk54/go_ecommerce_api/pkg/logger"
 	"github.com/nghiatk54/go_ecommerce_api/pkg/setting"
 	"github.com/redis/go-redis/v9"
@@ -12,4 +14,5 @@ var (
 	Logger *logger.LoggerZap
 	Mdb    *gorm.DB
 	Rdb    *redis.Client
+	Mdbc   *sql.DB
 )

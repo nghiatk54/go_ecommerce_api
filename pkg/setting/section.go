@@ -5,6 +5,7 @@ type Config struct {
 	Logger LoggerSetting `mapstructure:"logger"`
 	Mysql  MysqlSetting  `mapstructure:"mysql"`
 	Redis  RedisSetting  `mapstructure:"redis"`
+	Smtp   SmtpSetting   `mapstructure:"smtp"`
 }
 
 type ServerSetting struct {
@@ -38,4 +39,12 @@ type RedisSetting struct {
 	Password string `mapstructure:"password"`
 	Database int    `mapstructure:"database"`
 	PoolSize int    `mapstructure:"poolSize"`
+}
+
+type SmtpSetting struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+	From     string `mapstructure:"from"`
 }
