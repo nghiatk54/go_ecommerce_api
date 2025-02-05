@@ -3,8 +3,10 @@ package initialize
 func Run() {
 	LoadConfig()
 	InitLogger()
-	InitMysql()
+	InitMysqlC()
+	InitServiceInterface()
 	InitRedis()
+	InitKafkaProducer()
 	r := InitRouter()
 	r.Run(":8002")
 }

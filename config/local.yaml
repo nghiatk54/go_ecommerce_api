@@ -29,4 +29,8 @@ smtp:
   username: AKIA47CRXYD3EGBUCQUW
   password: BC0KeA4GAfzgRh/U9A5/+zdJyfwo7zAOdrJwuw0/Yppy
   from: nghiatk54@gmail.com
+kafka:
+  host: 192.168.0.102
+  port: 9092
+  topic: otp_auth_topic
 

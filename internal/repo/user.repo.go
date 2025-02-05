@@ -15,12 +15,13 @@ type userRepo struct {
 
 // Get user by email
 func (ur *userRepo) GetUserByEmail(email string) bool {
-	user, err := ur.sqlc.GetUserByEmailSqlc(ctx, email)
-	if err != nil {
-		return false
-	}
+	// user, err := ur.sqlc.GetUserByEmailSqlc(ctx, email)
+	// if err != nil {
+	// 	fmt.Printf("Error get user by email: %v\n", err)
+	// 	return false
+	// }
 
-	return user.UsrID != 0
+	return true
 }
 
 func NewUserRepo() IUserRepo {
