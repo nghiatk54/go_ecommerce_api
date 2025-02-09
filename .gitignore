@@ -4,3 +4,7 @@ config/production.yaml
 storage/
 # Ignore folder ./kafka
 kafka/
+# Ignore folder tmp
+tmp/
+# Ignore folder ./cmd/swagger
+cmd/swagger

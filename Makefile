@@ -35,9 +35,13 @@ sqlc_generate:
 # command with air
 air:
 	air
+#command with swagger
+swagger:
+	swag init -g ./cmd/${APP_NAME}/main.go -o ./cmd/swagger/docs
 
 
 .PHONY: dev run docker_up docker_stop docker_build
 .PHONY: up_by_one_db up_all_db down_all_db reset_all_db create_migration
 .PHONY: sqlc_generate 
 .PHONY: air
+.PHONY: swagger
