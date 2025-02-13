@@ -12,6 +12,8 @@ func (ur *UserRouter) InitUserRouter(router *gin.RouterGroup) {
 	userRouterPublic := router.Group("/user")
 	{
 		userRouterPublic.POST("/register", account.Login.Register)
+		userRouterPublic.POST("/verify_account", account.Login.VerifyOtp)
+		userRouterPublic.POST("/update_password_register", account.Login.UpdatePasswordRegister)
 		userRouterPublic.POST("/login", account.Login.Login)
 	}
 	// private router use middleware: limiter, authentication, permission

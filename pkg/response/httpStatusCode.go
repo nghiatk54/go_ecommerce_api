@@ -9,7 +9,8 @@ const (
 	// Register code
 	ErrCodeUserHasExists = 50001
 	// login code
-	ErrCodeOtpNotExists = 60009
+	ErrCodeOtpNotExists     = 60009
+	ErrCodeUserOtpNotExists = 60008
 )
 
 var msg = map[int]string{
@@ -21,5 +22,6 @@ var msg = map[int]string{
 	// Register message
 	ErrCodeUserHasExists: "User already exists!",
 	// login message
-	ErrCodeOtpNotExists: "Otp exists! but not registered!",
+	ErrCodeOtpNotExists:     "Otp exists! but not registered!",
+	ErrCodeUserOtpNotExists: "User Otp not exists!",
 }

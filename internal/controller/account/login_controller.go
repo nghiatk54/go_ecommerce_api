@@ -48,3 +48,51 @@ func (c *cUserLogin) Register(ctx *gin.Context) {
 	}
 	response.SuccessResponse(ctx, codeStatus, nil)
 }
+
+// User verify otp documentation
+// @Summary      Verify otp login by user
+// @Description  Verify otp login by user
+// @Tags         account management
+// @Accept       json
+// @Produce      json
+// @Param        payload body model.VerifyOtpInput true "payload"
+// @Success      200  {object}  response.ResponseData
+// @Failure      500  {object}  response.ErrorResponseData
+// @Router       /user/verify_account [post]
+func (c *cUserLogin) VerifyOtp(ctx *gin.Context) {
+	var params model.VerifyOtpInput
+	if err := ctx.ShouldBindJSON(&params); err != nil {
+		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
+		return
+	}
+	result, err := service.UserLogin().VerifyOtp(ctx, &params)
+	if err != nil {
+		response.ErrorResponse(ctx, response.ErrInvalidOtp, err.Error())
+		return
+	}
+	response.SuccessResponse(ctx, response.ErrCodeSuccess, result)
+}
+
+// User update password when register documentation
+// @Summary      User update password when register
+// @Description  User update password when register
+// @Tags         account management
+// @Accept       json
+// @Produce      json
+// @Param        payload body model.UpdatePasswordRegisterInput true "payload"
+// @Success      200  {object}  response.ResponseData
+// @Failure      500  {object}  response.ErrorResponseData
+// @Router       /user/update_password_register [post]
+func (c *cUserLogin) UpdatePasswordRegister(ctx *gin.Context) {
+	var params model.UpdatePasswordRegisterInput
+	if err := ctx.ShouldBindJSON(&params); err != nil {
+		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
+		return
+	}
+	result, err := service.UserLogin().UpdatePasswordRegister(ctx, params.UserToken, params.UserPassword)
+	if err != nil {
+		response.ErrorResponse(ctx, response.ErrCodeParamInvalid, err.Error())
+		return
+	}
+	response.SuccessResponse(ctx, response.ErrCodeSuccess, result)
+}

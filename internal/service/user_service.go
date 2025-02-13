@@ -11,8 +11,8 @@ type (
 	IUserLogin interface {
 		Login(ctx context.Context) error
 		Register(ctx context.Context, in *model.RegisterInput) (codeResult int, err error)
-		VerifyOtp(ctx context.Context) error
-		UpdatePasswordRegister(ctx context.Context) error
+		VerifyOtp(ctx context.Context, in *model.VerifyOtpInput) (out *model.VerifyOtpOutput, err error)
+		UpdatePasswordRegister(ctx context.Context, token string, password string) (userId int, err error)
 	}
 	IUserInfo interface {
 		GetInfoByUserId(ctx context.Context) error

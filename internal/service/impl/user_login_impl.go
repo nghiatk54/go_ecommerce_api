@@ -108,11 +108,84 @@ func (s *sUserLogin) Login(ctx context.Context) error {
 }
 
 // verify otp
-func (s *sUserLogin) VerifyOtp(ctx context.Context) error {
-	return nil
+func (s *sUserLogin) VerifyOtp(ctx context.Context, in *model.VerifyOtpInput) (out *model.VerifyOtpOutput, err error) {
+	// 0. set output
+	out = &model.VerifyOtpOutput{}
+	// 1. hash key
+	hashKey := crypto.GetHash(strings.ToLower(in.VerifyKey))
+	// 2. check otp is correct in redis
+	otpFound, err := global.Rdb.Get(ctx, util.GetUserKey(hashKey)).Result()
+	if err != nil {
+		return out, err
+	}
+	if in.VerifyCode != otpFound {
+		// if otp is not match in 1 minute?
+		return out, fmt.Errorf("otp is not match")
+	}
+	// 3. check user is exists in user verify
+	infoOtp, err := s.r.GetInfoOtp(ctx, hashKey)
+	if err != nil {
+		return out, err
+	}
+	// 4. update status is verified
+	err = s.r.UpdateUserVerificationStatus(ctx, hashKey)
+	if err != nil {
+		return out, err
+	}
+	// 5. return success
+	out.Token = infoOtp.VerifyKeyHash
+	out.Message = "Verify success"
+	return out, nil
 }
 
 // update password register
-func (s *sUserLogin) UpdatePasswordRegister(ctx context.Context) error {
-	return nil
+func (s *sUserLogin) UpdatePasswordRegister(ctx context.Context, token string, password string) (userId int, err error) {
+	// 1. check token is exists in database
+	infoOtp, err := s.r.GetInfoOtp(ctx, token)
+	if err != nil {
+		return response.ErrCodeUserOtpNotExists, err
+	}
+	// 2. check is verified
+	if infoOtp.IsVerified.Int32 == 0 {
+		return response.ErrCodeUserOtpNotExists, fmt.Errorf("user Otp not verified")
+	}
+	// 3. update user base
+	userBase := database.AddUserBaseParams{}
+	userBase.UserAccount = infoOtp.VerifyKey
+	userSalt, err := crypto.GenerateSalt(16)
+	if err != nil {
+		return response.ErrCodeUserOtpNotExists, err
+	}
+	userBase.UserSalt = userSalt
+	userBase.UserPassword = crypto.HashPassword(password, userSalt)
+	// 4. insert user base to table in database
+	newUserBase, err := s.r.AddUserBase(ctx, userBase)
+	if err != nil {
+		return response.ErrCodeUserOtpNotExists, err
+	}
+	user_id, err := newUserBase.LastInsertId()
+	if err != nil {
+		return response.ErrCodeUserOtpNotExists, err
+	}
+	// 5. add user info have user id
+	newUserInfo, err := s.r.AddUserHaveUserId(ctx, database.AddUserHaveUserIdParams{
+		UserID:               uint64(user_id),
+		UserAccount:          infoOtp.VerifyKey,
+		UserNickname:         sql.NullString{String: infoOtp.VerifyKey, Valid: true},
+		UserAvatar:           sql.NullString{String: "", Valid: true},
+		UserState:            1,
+		UserMobile:           sql.NullString{String: "", Valid: true},
+		UserGender:           sql.NullInt16{Int16: 0, Valid: true},
+		UserBirthday:         sql.NullTime{Time: time.Time{}, Valid: false},
+		UserEmail:            sql.NullString{String: infoOtp.VerifyKey, Valid: true},
+		UserIsAuthentication: 1,
+	})
+	if err != nil {
+		return response.ErrCodeUserOtpNotExists, err
+	}
+	lastIdUserInfo, err := newUserInfo.LastInsertId()
+	if err != nil {
+		return response.ErrCodeUserOtpNotExists, err
+	}
+	return int(lastIdUserInfo), nil
 }
