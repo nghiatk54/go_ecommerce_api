@@ -9,10 +9,14 @@ import (
 // define interface
 type (
 	IUserLogin interface {
-		Login(ctx context.Context) error
+		Login(ctx context.Context, in *model.LoginInput) (codeResult int, out *model.LoginOutput, err error)
 		Register(ctx context.Context, in *model.RegisterInput) (codeResult int, err error)
 		VerifyOtp(ctx context.Context, in *model.VerifyOtpInput) (out *model.VerifyOtpOutput, err error)
 		UpdatePasswordRegister(ctx context.Context, token string, password string) (userId int, err error)
+		// two factor authentication
+		IsTwoFactorEnabled(ctx context.Context, userId int) (codeResult int, rs bool, err error)
+		SetUpTwoFactorAuth(ctx context.Context, in *model.SetUpTwoFactorAuthInput) (codeResult int, err error)
+		VerifyTwoFactorAuth(ctx context.Context, in *model.VerifyTwoFactorAuthInput) (codeResult int, err error)
 	}
 	IUserInfo interface {
 		GetInfoByUserId(ctx context.Context) error

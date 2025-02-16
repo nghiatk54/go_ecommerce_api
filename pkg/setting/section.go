@@ -7,6 +7,7 @@ type Config struct {
 	Redis  RedisSetting  `mapstructure:"redis"`
 	Smtp   SmtpSetting   `mapstructure:"smtp"`
 	Kafka  KafkaSetting  `mapstructure:"kafka"`
+	Jwt    JwtSetting    `mapstructure:"jwt"`
 }
 
 type ServerSetting struct {
@@ -54,4 +55,10 @@ type KafkaSetting struct {
 	Host  string `mapstructure:"host"`
 	Port  int    `mapstructure:"port"`
 	Topic string `mapstructure:"topic"`
+}
+
+type JwtSetting struct {
+	TOKEN_HOUR_LIFESPAN int    `mapstructure:"TOKEN_HOUR_LIFESPAN"`
+	JWT_EXPIRATION      string `mapstructure:"JWT_EXPIRATION"`
+	API_SECRET          string `mapstructure:"API_SECRET"`
 }

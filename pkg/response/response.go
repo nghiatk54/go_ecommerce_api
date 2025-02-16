@@ -37,3 +37,15 @@ func ErrorResponse(c *gin.Context, code int, messages ...string) {
 		Data:    nil,
 	})
 }
+
+func ErrorResponseAbort(c *gin.Context, code int, messages ...string) {
+	message := msg[code]
+	if len(messages) > 0 {
+		message = messages[0]
+	}
+	c.AbortWithStatusJSON(http.StatusUnauthorized, ResponseData{
+		Code:    code,
+		Message: message,
+		Data:    nil,
+	})
+}

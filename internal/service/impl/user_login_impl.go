@@ -3,6 +3,7 @@ package impl
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -13,6 +14,7 @@ import (
 	"github.com/nghiatk54/go_ecommerce_api/internal/database"
 	"github.com/nghiatk54/go_ecommerce_api/internal/model"
 	"github.com/nghiatk54/go_ecommerce_api/internal/util"
+	"github.com/nghiatk54/go_ecommerce_api/internal/util/auth"
 	"github.com/nghiatk54/go_ecommerce_api/internal/util/crypto"
 	"github.com/nghiatk54/go_ecommerce_api/internal/util/random"
 	"github.com/nghiatk54/go_ecommerce_api/internal/util/send_to"
@@ -32,6 +34,90 @@ func NewUserLoginImpl(r *database.Queries) *sUserLogin {
 		r: r,
 	}
 }
+
+// *********************************** two factor authentication ***********************************
+// check two factor authentication is enabled
+func (s *sUserLogin) IsTwoFactorEnabled(ctx context.Context, userId int) (codeResult int, rs bool, err error) {
+	return response.ErrCodeSuccess, true, nil
+}
+
+// set up two factor authentication
+func (s *sUserLogin) SetUpTwoFactorAuth(ctx context.Context, in *model.SetUpTwoFactorAuthInput) (codeResult int, err error) {
+	// 1. check is two factor authentication is enabled
+	isTwoFactorAuth, err := s.r.IsTwoFactorEnabled(ctx, in.UserId)
+	if err != nil {
+		return response.ErrCodeTwoFactorAuthSetupFailed, err
+	}
+	if isTwoFactorAuth > 0 {
+		return response.ErrCodeTwoFactorAuthSetupFailed, fmt.Errorf("two factor authentication is already enabled")
+	}
+	// 2. create new type authentication
+	err = s.r.EnabledTwoFactorTypeEmail(ctx, database.EnabledTwoFactorTypeEmailParams{
+		UserID:            uint32(in.UserId),
+		TwoFactorAuthType: database.PreGoAccUserTwoFactor9999TwoFactorAuthTypeEMAIL,
+		TwoFactorEmail:    sql.NullString{String: in.TwoFactorEmail, Valid: true},
+	})
+	if err != nil {
+		return response.ErrCodeTwoFactorAuthSetupFailed, err
+	}
+	// 3. save otp to redis
+	keyUserTwoFactor := crypto.GetHash(fmt.Sprintf("2fa: %d", in.UserId))
+	otpNew := random.GenerateSixDigitOtp()
+	go func() {
+		err = global.Rdb.Set(ctx, keyUserTwoFactor, otpNew, time.Duration(constant.TIME_OTP_REGISTER_MINUTE)*time.Minute).Err()
+		if err != nil {
+			global.Logger.Error("Failed to set otp to redis", zap.Error(err))
+		} else {
+			global.Logger.Info("Otp set to redis successfully")
+		}
+	}()
+	// 4. send otp to email
+	err = send_to.SendTextEmailOtp([]string{in.TwoFactorEmail}, constant.HOST_EMAIL, strconv.Itoa(otpNew))
+	if err != nil {
+		return response.ErrCodeTwoFactorAuthSetupFailed, err
+	}
+	return response.ErrCodeSuccess, nil
+}
+
+// verify two factor authentication
+func (s *sUserLogin) VerifyTwoFactorAuth(ctx context.Context, in *model.VerifyTwoFactorAuthInput) (codeResult int, err error) {
+	// 1. check is two factor authentication is enabled
+	isTwoFactorAuth, err := s.r.IsTwoFactorEnabled(ctx, in.UserId)
+	if err != nil {
+		return response.ErrCodeTwoFactorAuthVerifyFailed, err
+	}
+	if isTwoFactorAuth > 0 {
+		return response.ErrCodeTwoFactorAuthVerifyFailed, fmt.Errorf("two factor authentication is enabled")
+	}
+	// 2. check otp in redis available
+	keyUserTwoFactor := crypto.GetHash(fmt.Sprintf("2fa: %d", in.UserId))
+	otpVerifyAuth, err := global.Rdb.Get(ctx, keyUserTwoFactor).Result()
+	if err == redis.Nil {
+		return response.ErrCodeTwoFactorAuthVerifyFailed, fmt.Errorf("key %s not exists", keyUserTwoFactor)
+	} else if err != nil {
+		return response.ErrCodeTwoFactorAuthVerifyFailed, err
+	}
+	// 3. check otp is correct
+	if otpVerifyAuth != in.TwoFactorCode {
+		return response.ErrCodeTwoFactorAuthVerifyFailed, fmt.Errorf("otp does not match")
+	}
+	// 4. update status is verified
+	err = s.r.UpdateTwoFactorStatus(ctx, database.UpdateTwoFactorStatusParams{
+		UserID:            uint32(in.UserId),
+		TwoFactorAuthType: database.PreGoAccUserTwoFactor9999TwoFactorAuthTypeEMAIL,
+	})
+	if err != nil {
+		return response.ErrCodeTwoFactorAuthVerifyFailed, err
+	}
+	// 5. remove otp from redis
+	_, err = global.Rdb.Del(ctx, keyUserTwoFactor).Result()
+	if err != nil {
+		return response.ErrCodeTwoFactorAuthVerifyFailed, err
+	}
+	return response.ErrCodeSuccess, nil
+}
+
+// *********************************** end two factor authentication ***********************************
 
 // register
 func (s *sUserLogin) Register(ctx context.Context, in *model.RegisterInput) (codeResult int, err error) {
@@ -100,11 +186,6 @@ func (s *sUserLogin) Register(ctx context.Context, in *model.RegisterInput) (cod
 		return response.ErrCodeSuccess, nil
 	}
 	return response.ErrCodeSuccess, nil
-}
-
-// login
-func (s *sUserLogin) Login(ctx context.Context) error {
-	return nil
 }
 
 // verify otp
@@ -188,4 +269,86 @@ func (s *sUserLogin) UpdatePasswordRegister(ctx context.Context, token string, p
 		return response.ErrCodeUserOtpNotExists, err
 	}
 	return int(lastIdUserInfo), nil
+}
+
+// login
+func (s *sUserLogin) Login(ctx context.Context, in *model.LoginInput) (codeResult int, out *model.LoginOutput, err error) {
+	out = &model.LoginOutput{}
+	// 1. check user is exists in user base
+	userBase, err := s.r.GetOneUserInfo(ctx, in.UserAccount)
+	if err != nil {
+		return response.ErrCodeAuthFailed, out, err
+	}
+	// 2. check user password is correct
+	if !crypto.MatchingPassword(userBase.UserPassword, in.UserPassword, userBase.UserSalt) {
+		return response.ErrCodeAuthFailed, out, fmt.Errorf("does not match password")
+	}
+	// 3. check two factor authentication
+	isTwoFactorEnabled, err := s.r.IsTwoFactorEnabled(ctx, uint32(userBase.UserID))
+	if err != nil {
+		return response.ErrCodeAuthFailed, out, fmt.Errorf("get two factor authentication failed")
+	}
+	if isTwoFactorEnabled > 0 {
+		// save otp to redis
+		keyUserLoginTwoFactor := crypto.GetHash(fmt.Sprintf("2fa:otp:%d", userBase.UserID))
+		otpNew := random.GenerateSixDigitOtp()
+		err = global.Rdb.Set(ctx, keyUserLoginTwoFactor, otpNew, time.Duration(constant.TIME_OTP_REGISTER_MINUTE)*time.Minute).Err()
+		if err != nil {
+			return response.ErrCodeAuthFailed, out, fmt.Errorf("set otp to redis failed")
+		}
+		// send otp to email
+		infoUserTwoFactor, err := s.r.GetTwoFactorMethodByUserIdAndAuthType(ctx, database.GetTwoFactorMethodByUserIdAndAuthTypeParams{
+			UserID:            uint32(userBase.UserID),
+			TwoFactorAuthType: database.PreGoAccUserTwoFactor9999TwoFactorAuthTypeEMAIL,
+		})
+		if err != nil {
+			return response.ErrCodeAuthFailed, out, fmt.Errorf("get two factor method by user id and auth type failed")
+		}
+		go func() {
+			err = send_to.SendTextEmailOtp([]string{infoUserTwoFactor.TwoFactorEmail.String}, constant.HOST_EMAIL, strconv.Itoa(otpNew))
+			if err != nil {
+				global.Logger.Error("Failed to send otp to email", zap.Error(err))
+			} else {
+				global.Logger.Info("Otp sent to email successfully")
+			}
+		}()
+		out.Message = fmt.Sprintf("send OTP 2FA to email: %s, please check your email", infoUserTwoFactor.TwoFactorEmail.String)
+		return response.ErrCodeSuccess, out, nil
+	}
+	// 4. update user login time
+	go func() {
+		err := s.r.LoginUserBase(ctx, database.LoginUserBaseParams{
+			UserLoginIp: sql.NullString{String: "127.0.0.1", Valid: true},
+			UserAccount: in.UserAccount,
+		})
+		if err != nil {
+			global.Logger.Error("Failed to update user login time", zap.Error(err))
+		} else {
+			global.Logger.Info("User login time updated successfully")
+		}
+	}()
+	// 5. create uuid user
+	subToken := util.GenerateCliTokenUuid(int(userBase.UserID))
+	global.Logger.Info("subToken", zap.String("subToken", subToken))
+	// 6. get user info table
+	infoUser, err := s.r.GetUser(ctx, uint64(userBase.UserID))
+	if err != nil {
+		return response.ErrCodeAuthFailed, out, err
+	}
+	// 7. convert user info to json
+	infoUserJson, err := json.Marshal(infoUser)
+	if err != nil {
+		return response.ErrCodeAuthFailed, out, fmt.Errorf("convert user info to json failed %v", err)
+	}
+	// 8. save user info to redis with key = subToken
+	err = global.Rdb.Set(ctx, subToken, infoUserJson, time.Duration(constant.TIME_2FA_VERIFY_HOUR)*time.Hour).Err()
+	if err != nil {
+		return response.ErrCodeAuthFailed, out, err
+	}
+	// 9. create token
+	out.Token, err = auth.CreateToken(subToken)
+	if err != nil {
+		return response.ErrCodeAuthFailed, out, err
+	}
+	return response.ErrCodeSuccess, out, nil
 }

@@ -1,5 +1,6 @@
 package model
 
+// *********************************** Register ***********************************
 type RegisterInput struct {
 	VerifyKey     string `json:"verify_key"`
 	VerifyType    int    `json:"verify_type"`
@@ -20,4 +21,27 @@ type VerifyOtpOutput struct {
 type UpdatePasswordRegisterInput struct {
 	UserToken    string `json:"user_token"`
 	UserPassword string `json:"user_password"`
+}
+
+// *********************************** Login ***********************************
+type LoginInput struct {
+	UserAccount  string `json:"user_account"`
+	UserPassword string `json:"user_password"`
+}
+
+type LoginOutput struct {
+	Token   string `json:"token"`
+	Message string `json:"message"`
+}
+
+// *********************************** Two Factor Authentication ***********************************
+type SetUpTwoFactorAuthInput struct {
+	UserId            uint32 `json:"user_id"`
+	TwoFactorAuthType string `json:"two_factor_auth_type"`
+	TwoFactorEmail    string `json:"two_factor_email"`
+}
+
+type VerifyTwoFactorAuthInput struct {
+	UserId        uint32 `json:"user_id"`
+	TwoFactorCode string `json:"two_factor_code"`
 }
