@@ -1,1 +1,4 @@
 /doc
+/log
+/config/production.yaml
+/storage

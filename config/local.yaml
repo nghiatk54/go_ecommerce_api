@@ -1,0 +1,18 @@
+server:
+  port: 9000
+mysql:
+  host: 127.0.0.1
+  port: 33306
+  username: root
+  password: root1234
+  dbname: shopDevGo
+  maxIdleConns: 10
+  maxOpenConns: 100
+  connMaxLifetime: 3600
+logger:
+  level: debug
+  filename: ./storage/log/dev.001.log
+  maxSize: 500
+  maxBackups: 3
+  maxAge: 30
+  compress: true
