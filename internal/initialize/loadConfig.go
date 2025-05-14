@@ -22,4 +22,5 @@ func LoadConfig() {
 	if err := viper.Unmarshal(&global.Config); err != nil {
 		fmt.Printf("Unable to decode configuration %v", err)
 	}
+	fmt.Printf("Load config success!")
 }

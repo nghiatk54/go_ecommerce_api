@@ -1,6 +1,16 @@
 # name app
 APP_NAME = server
 
+# run dev
+dev:
+	go run ./cmd/${APP_NAME}
 # run
 run:
-	go run ./cmd/${APP_NAME}
+	docker compose up -d && go run ./cmd/${APP_NAME}
+# up
+up:
+	docker compose up -d
+# down
+down:
+	docker compose down
+

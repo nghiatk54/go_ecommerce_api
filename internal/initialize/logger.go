@@ -7,4 +7,5 @@ import (
 
 func InitLogger() {
 	global.Logger = logger.NewLogger(global.Config.LoggerSetting)
+	global.Logger.Info("Init logger success!")
 }
